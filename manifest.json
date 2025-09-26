@@ -1,0 +1,23 @@
+{
+  "name": "Properties Side Bar",
+  "authorName": "Lucas Souza Dev",
+  "packageName": "parsifly-extension-properties-side-bar",
+  "description": "This extension provide a properties side bar. It can be used to view and edit the properties of the project.",
+  "platformActions": [],
+  "parsers": [],
+  "views": [
+    {
+      "actions": [],
+      "type": "view",
+      "title": "Properties",
+      "icon": "VscSymbolProperty",
+      "key": "properties-side-bar",
+      "positionPreferred": "secondary",
+      "description": "Show the project resource properties in one place",
+      "dataProvider": {
+        "type": "form",
+        "key": "properties-data-provider"
+      }
+    }
+  ]
+}
