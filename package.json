@@ -1,6 +1,6 @@
 {
   "name": "parsifly-extension-properties-side-bar",
-  "version": "1.1.0",
+  "version": "1.0.0-alpha.0",
   "module": "dist/index.js",
   "manifest": "manifest.json",
   "private": false,
