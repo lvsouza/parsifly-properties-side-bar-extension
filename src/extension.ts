@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FormViewItem } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor } from 'parsifly-extension-base';
 
 new class Extension extends ExtensionBase {
 
@@ -21,7 +21,7 @@ new class Extension extends ExtensionBase {
         if (page) {
           const fields = await this.application.fields.get(page.id);
 
-          console.log('fiedls', fields)
+          console.log('fields', fields)
 
           return fields;
         }
@@ -48,18 +48,18 @@ new class Extension extends ExtensionBase {
 
 
 
-  dynamicFields: Set<FormViewItem> = new Set();
-  createRegisteredField(props: FormViewItem) {
-    const field = new FormViewItem(props);
+  dynamicFields: Set<FieldDescriptor> = new Set();
+  createRegisteredField(props: FieldDescriptor) {
+    const field = new FieldDescriptor(props);
 
     this.dynamicFields.add(field);
-    this.application.views.register(field);
+    this.application.fields.register(field);
 
     return field;
   }
   clearFields() {
     this.dynamicFields.forEach(field => {
-      this.application.views.unregister(field);
+      this.application.fields.unregister(field);
       this.dynamicFields.delete(field);
     })
   }
