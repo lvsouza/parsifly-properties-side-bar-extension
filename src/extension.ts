@@ -1,79 +1,6 @@
-import { ExtensionBase, View, FormProvider, FormViewItem } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FormViewItem } from 'parsifly-extension-base';
 
 new class Extension extends ExtensionBase {
-  // Campos dinâmicos criados e registrados
-  private dynamicFields: FormViewItem[] = [];
-
-  // Schema dos tipos de recurso
-  // Cada tipo define os campos que deseja exibir
-  private resourceSchemas: Record<string, Array<{
-    key: string;
-    type: string;
-    label?: string;
-    description?: string;
-    defaultValue?: any;
-  }>> = {
-      page: [
-        { key: 'id', type: 'view' },
-        { key: 'name', type: 'text' },
-        { key: 'description', type: 'longText' },
-        { key: 'status', type: 'switch', defaultValue: true },
-      ],
-      component: [
-        { key: 'id', type: 'view' },
-        { key: 'name', type: 'text' },
-        { key: 'props', type: 'object' },
-        { key: 'enabled', type: 'switch', defaultValue: false },
-      ],
-      service: [
-        { key: 'id', type: 'view' },
-        { key: 'name', type: 'text' },
-        { key: 'description', type: 'longText' },
-        { key: 'timeout', type: 'number', defaultValue: 1000 },
-        { key: 'active', type: 'switch', defaultValue: true },
-      ],
-    };
-
-  // Geração de fields com registro automático
-  private createDynamicField = (config: {
-    key: string;
-    type: string;
-    label?: string;
-    description?: string;
-    defaultValue?: any;
-  }): FormViewItem => {
-    const field = new FormViewItem({
-      key: `dyn-${config.key}`,
-      name: config.key,
-      type: config.type,
-      label: config.label ?? config.key,
-      description: config.description ?? '',
-      children: false,
-      defaultValue: config.defaultValue,
-
-      getValue: async () => config.defaultValue,
-      onDidChange: async (value) => {
-        console.log(`Dynamic field changed [${config.key}]`, value);
-      },
-    });
-
-    this.application.views.register(field);
-    this.dynamicFields.push(field);
-
-    return field;
-  };
-
-  // Limpa todos os fields dinâmicos registrados
-  private clearDynamicFields = () => {
-    for (const field of this.dynamicFields) {
-      try {
-        this.application.views.unregister(field);
-      } catch (e) {
-        console.warn('Erro ao unregister field:', field.name, e);
-      }
-    }
-    this.dynamicFields = [];
-  };
 
   // View principal: Properties
   private propertiesView = new View({
@@ -81,7 +8,6 @@ new class Extension extends ExtensionBase {
     dataProvider: new FormProvider({
       key: 'properties-data-provider',
       getFields: async () => {
-        this.clearDynamicFields();
 
         const selectedKeys = await this.application.selection.get();
         if (!selectedKeys.length) return [];
@@ -92,55 +18,149 @@ new class Extension extends ExtensionBase {
         // pages
         const pages = await this.application.dataProviders.project.pages();
         const page = pages.find((p) => p.id === selectedKey);
-        if (page) return this.generateFieldsForType('page', page);
+        if (page) {
+          const fields = await this.application.fields.get(page.id);
+
+          console.log('fiedls', fields)
+
+          return fields;
+        }
 
         // components
         const components = await this.application.dataProviders.project.components();
         const component = components.find((c) => c.id === selectedKey);
-        if (component) return this.generateFieldsForType('component', component);
+        if (component) return await this.application.fields.get(component.id);
 
         // services
         const services = await this.application.dataProviders.project.services();
         const service = services.find((s) => s.id === selectedKey);
-        if (service) return this.generateFieldsForType('service', service);
+        if (service) return await this.application.fields.get(service.id);
 
         // pasta (não está nas listas acima, então tratamos como folder)
-        return this.generateFieldsForType('folder', { id: selectedKey });
+        return await this.application.fields.get(selectedKey);
       },
     }),
   });
 
-  // Gera fields com base no schema do tipo
-  private generateFieldsForType = (type: string, resource: any): FormViewItem[] => {
-    const schema = this.resourceSchemas[type];
-    if (!schema) return [];
-
-    return schema.map((fieldSchema) => {
-      const defaultValue = resource[fieldSchema.key] ?? fieldSchema.defaultValue;
-
-      return this.createDynamicField({
-        key: fieldSchema.key,
-        type: fieldSchema.type,
-        label: fieldSchema.label ?? fieldSchema.key,
-        description: fieldSchema.description,
-        defaultValue,
-      });
-    });
-  };
-
   private selectionUnsubscribe = this.application.selection.subscribe(async () => {
-    this.clearDynamicFields();
     await this.application.views.refresh(this.propertiesView);
   });
 
+
+
+  dynamicFields: Set<FormViewItem> = new Set();
+  createRegisteredField(props: FormViewItem) {
+    const field = new FormViewItem(props);
+
+    this.dynamicFields.add(field);
+    this.application.views.register(field);
+
+    return field;
+  }
+  clearFields() {
+    this.dynamicFields.forEach(field => {
+      this.application.views.unregister(field);
+      this.dynamicFields.delete(field);
+    })
+  }
+
+  defaultFieldsDescriptor = new FieldsDescriptor({
+    key: 'default-fields',
+    onGetFields: async (key) => {
+      this.clearFields();
+
+      console.log('fields get', key);
+
+      const pages = await this.application.dataProviders.project.pages();
+      const page = pages.find((page) => page.id === key);
+      if (page) return [
+        this.createRegisteredField({
+          key: crypto.randomUUID(),
+          label: 'Name',
+          name: 'name',
+          type: 'text',
+          children: false,
+          icon: '',
+          defaultValue: '',
+          description: 'Altera o nome do campo',
+          getValue: async () => {
+            return page.name;
+          },
+          onDidChange: async (value) => {
+            if (typeof value === 'string') {
+              page.name = value;
+              //await this.application.dataProviders.project.pages.set(page)
+            }
+          },
+        }),
+      ];
+
+      const components = await this.application.dataProviders.project.components();
+      const component = components.find((component) => component.id === key);
+      if (component) return [
+        this.createRegisteredField({
+          key: crypto.randomUUID(),
+          label: 'Name',
+          name: 'name',
+          type: 'text',
+          children: false,
+          icon: '',
+          defaultValue: '',
+          description: 'Altera o nome do campo',
+          getValue: async () => {
+            return component.name;
+          },
+          onDidChange: async (value) => {
+            if (typeof value === 'string') {
+              component.name = value;
+              //await this.application.dataProviders.project.components.set(component)
+            }
+          },
+        }),
+      ];
+
+      const services = await this.application.dataProviders.project.services();
+      const service = services.find((service) => service.id === key);
+      if (service) return [
+        this.createRegisteredField({
+          key: crypto.randomUUID(),
+          label: 'Name',
+          name: 'name',
+          type: 'text',
+          children: false,
+          icon: '',
+          defaultValue: '',
+          description: 'Altera o nome do campo',
+          getValue: async () => {
+            return service.name;
+          },
+          onDidChange: async (value) => {
+            if (typeof value === 'string') {
+              service.name = value;
+              //await this.application.dataProviders.project.services.set(service)
+            }
+          },
+        }),
+      ];
+
+      return [];
+    }
+  })
+
+
+
+
   async activate() {
     this.application.views.register(this.propertiesView);
+    this.application.fields.register(this.defaultFieldsDescriptor);
+
     await this.application.commands.editor.showSecondarySideBarByKey('properties-side-bar');
   }
 
   async deactivate() {
     this.application.views.unregister(this.propertiesView);
-    this.clearDynamicFields();
+    this.application.fields.unregister(this.defaultFieldsDescriptor);
+
     this.selectionUnsubscribe();
   }
 };
