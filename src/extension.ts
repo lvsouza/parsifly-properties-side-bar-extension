@@ -1,164 +1,146 @@
 import { ExtensionBase, View, FormProvider, FormViewItem } from 'parsifly-extension-base';
 
-// Envs.DEBUG = true;
-
-
 new class Extension extends ExtensionBase {
-  selection = undefined;
+  // Campos dinâmicos criados e registrados
+  private dynamicFields: FormViewItem[] = [];
 
-  fieldView = new FormViewItem({
-    key: 'view',
-    name: 'view',
-    type: 'view',
-    label: 'View',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-  });
-  fieldText = new FormViewItem({
-    key: 'text',
-    name: 'text',
-    type: 'text',
-    label: 'Text',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-    getValue: async () => {
-      return 'Testando';
-    },
-    onDidChange: async (value) => {
-      console.log('did change text field', value);
-    },
-  });
-  fieldNumber = new FormViewItem({
-    key: 'number',
-    name: 'number',
-    type: 'number',
-    label: 'Number',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-  });
-  fieldLongText = new FormViewItem({
-    key: 'longText',
-    name: 'longText',
-    type: 'longText',
-    label: 'LongText',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-  });
-  fieldAutocomplete = new FormViewItem({
-    key: 'autocomplete',
-    name: 'autocomplete',
-    type: 'autocomplete',
-    label: 'Autocomplete',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-  });
-  fieldSwitch = new FormViewItem({
-    key: 'switch',
-    name: 'switch',
-    type: 'switch',
-    label: 'Switch',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-  });
-  fieldButton = new FormViewItem({
-    key: 'button',
-    name: 'button',
-    type: 'button',
-    label: 'Button',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-  });
-  fieldObject = new FormViewItem({
-    key: 'object',
-    name: 'object',
-    type: 'object',
-    label: 'Object',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-  });
-  fieldListOf = new FormViewItem({
-    key: 'listOf',
-    name: 'listOf',
-    type: 'listOf',
-    label: 'ListOf',
-    children: false,
-    icon: undefined,
-    defaultValue: undefined,
-    description: 'Description of the field',
-  });
+  // Schema dos tipos de recurso
+  // Cada tipo define os campos que deseja exibir
+  private resourceSchemas: Record<string, Array<{
+    key: string;
+    type: string;
+    label?: string;
+    description?: string;
+    defaultValue?: any;
+  }>> = {
+      page: [
+        { key: 'id', type: 'view' },
+        { key: 'name', type: 'text' },
+        { key: 'description', type: 'longText' },
+        { key: 'status', type: 'switch', defaultValue: true },
+      ],
+      component: [
+        { key: 'id', type: 'view' },
+        { key: 'name', type: 'text' },
+        { key: 'props', type: 'object' },
+        { key: 'enabled', type: 'switch', defaultValue: false },
+      ],
+      service: [
+        { key: 'id', type: 'view' },
+        { key: 'name', type: 'text' },
+        { key: 'description', type: 'longText' },
+        { key: 'timeout', type: 'number', defaultValue: 1000 },
+        { key: 'active', type: 'switch', defaultValue: true },
+      ],
+    };
 
-  propertiesView = new View({
+  // Geração de fields com registro automático
+  private createDynamicField = (config: {
+    key: string;
+    type: string;
+    label?: string;
+    description?: string;
+    defaultValue?: any;
+  }): FormViewItem => {
+    const field = new FormViewItem({
+      key: `dyn-${config.key}`,
+      name: config.key,
+      type: config.type,
+      label: config.label ?? config.key,
+      description: config.description ?? '',
+      children: false,
+      defaultValue: config.defaultValue,
+
+      getValue: async () => config.defaultValue,
+      onDidChange: async (value) => {
+        console.log(`Dynamic field changed [${config.key}]`, value);
+      },
+    });
+
+    this.application.views.register(field);
+    this.dynamicFields.push(field);
+
+    return field;
+  };
+
+  // Limpa todos os fields dinâmicos registrados
+  private clearDynamicFields = () => {
+    for (const field of this.dynamicFields) {
+      try {
+        this.application.views.unregister(field);
+      } catch (e) {
+        console.warn('Erro ao unregister field:', field.name, e);
+      }
+    }
+    this.dynamicFields = [];
+  };
+
+  // View principal: Properties
+  private propertiesView = new View({
     key: 'properties-side-bar',
     dataProvider: new FormProvider({
       key: 'properties-data-provider',
-      getFields: async (field) => {
-        if (field?.children) return [];
+      getFields: async () => {
+        this.clearDynamicFields();
 
-        console.log(await this.application.selection.get());
+        const selectedKeys = await this.application.selection.get();
+        if (!selectedKeys.length) return [];
 
-        return [
-          this.fieldView,
-          this.fieldText,
-          this.fieldNumber,
-          this.fieldLongText,
-          this.fieldAutocomplete,
-          this.fieldSwitch,
-          this.fieldButton,
-          this.fieldObject,
-          this.fieldListOf,
-        ];
+        const selectedKey = selectedKeys[0];
+
+        // Descobrir o tipo real do recurso perguntando ao DataProvider
+        // pages
+        const pages = await this.application.dataProviders.project.pages();
+        const page = pages.find((p) => p.id === selectedKey);
+        if (page) return this.generateFieldsForType('page', page);
+
+        // components
+        const components = await this.application.dataProviders.project.components();
+        const component = components.find((c) => c.id === selectedKey);
+        if (component) return this.generateFieldsForType('component', component);
+
+        // services
+        const services = await this.application.dataProviders.project.services();
+        const service = services.find((s) => s.id === selectedKey);
+        if (service) return this.generateFieldsForType('service', service);
+
+        // pasta (não está nas listas acima, então tratamos como folder)
+        return this.generateFieldsForType('folder', { id: selectedKey });
       },
     }),
   });
 
+  // Gera fields com base no schema do tipo
+  private generateFieldsForType = (type: string, resource: any): FormViewItem[] => {
+    const schema = this.resourceSchemas[type];
+    if (!schema) return [];
+
+    return schema.map((fieldSchema) => {
+      const defaultValue = resource[fieldSchema.key] ?? fieldSchema.defaultValue;
+
+      return this.createDynamicField({
+        key: fieldSchema.key,
+        type: fieldSchema.type,
+        label: fieldSchema.label ?? fieldSchema.key,
+        description: fieldSchema.description,
+        defaultValue,
+      });
+    });
+  };
+
+  private selectionUnsubscribe = this.application.selection.subscribe(async () => {
+    this.clearDynamicFields();
+    await this.application.views.refresh(this.propertiesView);
+  });
 
   async activate() {
-    console.log('EXTENSION: Activating');
-
     this.application.views.register(this.propertiesView);
-
-    this.application.views.register(this.fieldView);
-    this.application.views.register(this.fieldText);
-    this.application.views.register(this.fieldNumber);
-    this.application.views.register(this.fieldLongText);
-    this.application.views.register(this.fieldAutocomplete);
-    this.application.views.register(this.fieldSwitch);
-    this.application.views.register(this.fieldButton);
-    this.application.views.register(this.fieldObject);
-    this.application.views.register(this.fieldListOf);
-
     await this.application.commands.editor.showSecondarySideBarByKey('properties-side-bar');
   }
 
   async deactivate() {
-    console.log('EXTENSION: Deactivating');
-
     this.application.views.unregister(this.propertiesView);
-
-    this.application.views.unregister(this.fieldView);
-    this.application.views.unregister(this.fieldText);
-    this.application.views.unregister(this.fieldNumber);
-    this.application.views.unregister(this.fieldLongText);
-    this.application.views.unregister(this.fieldAutocomplete);
-    this.application.views.unregister(this.fieldSwitch);
-    this.application.views.unregister(this.fieldButton);
-    this.application.views.unregister(this.fieldObject);
-    this.application.views.unregister(this.fieldListOf);
+    this.clearDynamicFields();
+    this.selectionUnsubscribe();
   }
 };
