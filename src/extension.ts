@@ -46,9 +46,7 @@ new class Extension extends ExtensionBase {
     onGetFields: async (key) => {
       this.clearFields();
 
-      console.log('fields get', key);
-
-      const page = await this.application.dataProviders.doc('project').collection<IPage>('pages').doc(key).value();
+      const page = await this.application.dataProviders.project().collection<IPage>('pages').doc(key).value();
       if (page) return [
         this.createRegisteredField({
           key: crypto.randomUUID(),
@@ -58,19 +56,37 @@ new class Extension extends ExtensionBase {
           children: false,
           icon: '',
           defaultValue: '',
-          description: 'Altera o nome do campo',
+          description: 'Change page name',
           getValue: async () => {
             return page.name;
           },
           onDidChange: async (value) => {
             if (typeof value === 'string') {
-              await this.application.dataProviders.doc('project').collection<IPage>('pages').doc(key).field('name').set(value);
+              await this.application.dataProviders.project().collection<IPage>('pages').doc(key).field('name').set(value);
+            }
+          },
+        }),
+        this.createRegisteredField({
+          key: crypto.randomUUID(),
+          label: 'Description',
+          name: 'description',
+          type: 'longText',
+          children: false,
+          icon: '',
+          defaultValue: '',
+          description: 'Change page description',
+          getValue: async () => {
+            return page.description || '';
+          },
+          onDidChange: async (value) => {
+            if (typeof value === 'string') {
+              await this.application.dataProviders.project().collection<IPage>('pages').doc(key).field('description').set(value);
             }
           },
         }),
       ];
 
-      const component = await this.application.dataProviders.doc('project').collection<IComponent>('components').doc(key).value();
+      const component = await this.application.dataProviders.project().collection<IComponent>('components').doc(key).value();
       if (component) return [
         this.createRegisteredField({
           key: crypto.randomUUID(),
@@ -80,19 +96,37 @@ new class Extension extends ExtensionBase {
           children: false,
           icon: '',
           defaultValue: '',
-          description: 'Altera o nome do campo',
+          description: 'Change component name',
           getValue: async () => {
             return component.name;
           },
           onDidChange: async (value) => {
             if (typeof value === 'string') {
-              await this.application.dataProviders.doc('project').collection<IComponent>('components').doc(key).field('name').set(value);
+              await this.application.dataProviders.project().collection<IComponent>('components').doc(key).field('name').set(value);
+            }
+          },
+        }),
+        this.createRegisteredField({
+          key: crypto.randomUUID(),
+          label: 'Description',
+          name: 'description',
+          type: 'longText',
+          children: false,
+          icon: '',
+          defaultValue: '',
+          description: 'Change component description',
+          getValue: async () => {
+            return component.description || '';
+          },
+          onDidChange: async (value) => {
+            if (typeof value === 'string') {
+              await this.application.dataProviders.project().collection<IComponent>('components').doc(key).field('description').set(value);
             }
           },
         }),
       ];
 
-      const service = await this.application.dataProviders.doc('project').collection<IService>('services').doc(key).value();
+      const service = await this.application.dataProviders.project().collection<IService>('services').doc(key).value();
       if (service) return [
         this.createRegisteredField({
           key: crypto.randomUUID(),
@@ -102,13 +136,31 @@ new class Extension extends ExtensionBase {
           children: false,
           icon: '',
           defaultValue: '',
-          description: 'Altera o nome do campo',
+          description: 'Change service name',
           getValue: async () => {
             return service.name;
           },
           onDidChange: async (value) => {
             if (typeof value === 'string') {
-              await this.application.dataProviders.doc('project').collection<IService>('services').doc(key).field('name').set(value);
+              await this.application.dataProviders.project().collection<IService>('services').doc(key).field('name').set(value);
+            }
+          },
+        }),
+        this.createRegisteredField({
+          key: crypto.randomUUID(),
+          label: 'Description',
+          name: 'description',
+          type: 'longText',
+          children: false,
+          icon: '',
+          defaultValue: '',
+          description: 'Change service description',
+          getValue: async () => {
+            return service.description || '';
+          },
+          onDidChange: async (value) => {
+            if (typeof value === 'string') {
+              await this.application.dataProviders.project().collection<IService>('services').doc(key).field('description').set(value);
             }
           },
         }),
