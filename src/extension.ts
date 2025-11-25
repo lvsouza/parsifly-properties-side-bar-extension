@@ -1,4 +1,5 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IService } from 'parsifly-extension-base';
+
 
 new class Extension extends ExtensionBase {
 
@@ -8,35 +9,11 @@ new class Extension extends ExtensionBase {
     dataProvider: new FormProvider({
       key: 'properties-data-provider',
       getFields: async () => {
-
         const selectedKeys = await this.application.selection.get();
         if (!selectedKeys.length) return [];
 
         const selectedKey = selectedKeys[0];
 
-        // Descobrir o tipo real do recurso perguntando ao DataProvider
-        // pages
-        const pages = await this.application.dataProviders.project.pages();
-        const page = pages.find((p) => p.id === selectedKey);
-        if (page) {
-          const fields = await this.application.fields.get(page.id);
-
-          console.log('fields', fields)
-
-          return fields;
-        }
-
-        // components
-        const components = await this.application.dataProviders.project.components();
-        const component = components.find((c) => c.id === selectedKey);
-        if (component) return await this.application.fields.get(component.id);
-
-        // services
-        const services = await this.application.dataProviders.project.services();
-        const service = services.find((s) => s.id === selectedKey);
-        if (service) return await this.application.fields.get(service.id);
-
-        // pasta (não está nas listas acima, então tratamos como folder)
         return await this.application.fields.get(selectedKey);
       },
     }),
@@ -71,8 +48,7 @@ new class Extension extends ExtensionBase {
 
       console.log('fields get', key);
 
-      const pages = await this.application.dataProviders.project.pages();
-      const page = pages.find((page) => page.id === key);
+      const page = await this.application.dataProviders.doc('project').collection<IPage>('pages').doc(key).value();
       if (page) return [
         this.createRegisteredField({
           key: crypto.randomUUID(),
@@ -88,15 +64,13 @@ new class Extension extends ExtensionBase {
           },
           onDidChange: async (value) => {
             if (typeof value === 'string') {
-              page.name = value;
-              //await this.application.dataProviders.project.pages.set(page)
+              await this.application.dataProviders.doc('project').collection<IPage>('pages').doc(key).field('name').set(value);
             }
           },
         }),
       ];
 
-      const components = await this.application.dataProviders.project.components();
-      const component = components.find((component) => component.id === key);
+      const component = await this.application.dataProviders.doc('project').collection<IComponent>('components').doc(key).value();
       if (component) return [
         this.createRegisteredField({
           key: crypto.randomUUID(),
@@ -112,15 +86,13 @@ new class Extension extends ExtensionBase {
           },
           onDidChange: async (value) => {
             if (typeof value === 'string') {
-              component.name = value;
-              //await this.application.dataProviders.project.components.set(component)
+              await this.application.dataProviders.doc('project').collection<IComponent>('components').doc(key).field('name').set(value);
             }
           },
         }),
       ];
 
-      const services = await this.application.dataProviders.project.services();
-      const service = services.find((service) => service.id === key);
+      const service = await this.application.dataProviders.doc('project').collection<IService>('services').doc(key).value();
       if (service) return [
         this.createRegisteredField({
           key: crypto.randomUUID(),
@@ -136,8 +108,7 @@ new class Extension extends ExtensionBase {
           },
           onDidChange: async (value) => {
             if (typeof value === 'string') {
-              service.name = value;
-              //await this.application.dataProviders.project.services.set(service)
+              await this.application.dataProviders.doc('project').collection<IService>('services').doc(key).field('name').set(value);
             }
           },
         }),
