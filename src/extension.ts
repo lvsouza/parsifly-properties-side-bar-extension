@@ -25,30 +25,12 @@ new class Extension extends ExtensionBase {
 
 
 
-  dynamicFields: Set<FieldDescriptor> = new Set();
-  createRegisteredField(props: FieldDescriptor) {
-    const field = new FieldDescriptor(props);
-
-    this.dynamicFields.add(field);
-    this.application.fields.register(field);
-
-    return field;
-  }
-  clearFields() {
-    this.dynamicFields.forEach(field => {
-      this.application.fields.unregister(field);
-      this.dynamicFields.delete(field);
-    })
-  }
-
   defaultFieldsDescriptor = new FieldsDescriptor({
     key: 'default-fields',
     onGetFields: async (key) => {
-      this.clearFields();
-
       const page = await this.application.dataProviders.project().collection<IPage>('pages').doc(key).value();
       if (page) return [
-        this.createRegisteredField({
+        new FieldDescriptor({
           key: crypto.randomUUID(),
           label: 'Name',
           name: 'name',
@@ -66,7 +48,7 @@ new class Extension extends ExtensionBase {
             }
           },
         }),
-        this.createRegisteredField({
+        new FieldDescriptor({
           key: crypto.randomUUID(),
           label: 'Description',
           name: 'description',
@@ -88,7 +70,7 @@ new class Extension extends ExtensionBase {
 
       const component = await this.application.dataProviders.project().collection<IComponent>('components').doc(key).value();
       if (component) return [
-        this.createRegisteredField({
+        new FieldDescriptor({
           key: crypto.randomUUID(),
           label: 'Name',
           name: 'name',
@@ -106,7 +88,7 @@ new class Extension extends ExtensionBase {
             }
           },
         }),
-        this.createRegisteredField({
+        new FieldDescriptor({
           key: crypto.randomUUID(),
           label: 'Description',
           name: 'description',
@@ -128,7 +110,7 @@ new class Extension extends ExtensionBase {
 
       const service = await this.application.dataProviders.project().collection<IService>('services').doc(key).value();
       if (service) return [
-        this.createRegisteredField({
+        new FieldDescriptor({
           key: crypto.randomUUID(),
           label: 'Name',
           name: 'name',
@@ -146,7 +128,7 @@ new class Extension extends ExtensionBase {
             }
           },
         }),
-        this.createRegisteredField({
+        new FieldDescriptor({
           key: crypto.randomUUID(),
           label: 'Description',
           name: 'description',
