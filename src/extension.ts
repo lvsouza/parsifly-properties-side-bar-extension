@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IService } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IService, IFolder, IDoc, ICollection } from 'parsifly-extension-base';
 
 
 new class Extension extends ExtensionBase {
@@ -24,131 +24,197 @@ new class Extension extends ExtensionBase {
   });
 
 
+  deepSearch(base: ICollection<IPage | IComponent | IService | IFolder>, key: string, items: (IPage | IComponent | IService | IFolder)[]): [IPage | IComponent | IService | IFolder | undefined, IDoc<IPage | IComponent | IService | IFolder> | undefined] {
+    for (const item of items) {
+      if (item.id === key) return [item, base.doc(item.id)];
+
+      if (item.type === 'folder') {
+        const [result, resultPath] = this.deepSearch(base.doc(item.id).collection('content'), key, item.content)
+        if (result) return [result, resultPath];
+      }
+    }
+
+    return [undefined, undefined];
+  }
 
   defaultFieldsDescriptor = new FieldsDescriptor({
     key: 'default-fields',
     onGetFields: async (key) => {
-      const page = await this.application.dataProviders.project().collection<IPage>('pages').doc(key).value();
-      if (page) return [
-        new FieldDescriptor({
-          key: crypto.randomUUID(),
-          label: 'Name',
-          name: 'name',
-          type: 'text',
-          children: false,
-          icon: '',
-          defaultValue: '',
-          description: 'Change page name',
-          getValue: async () => {
-            return page.name;
-          },
-          onDidChange: async (value) => {
-            if (typeof value === 'string') {
-              await this.application.dataProviders.project().collection<IPage>('pages').doc(key).field('name').set(value);
-            }
-          },
-        }),
-        new FieldDescriptor({
-          key: crypto.randomUUID(),
-          label: 'Description',
-          name: 'description',
-          type: 'longText',
-          children: false,
-          icon: '',
-          defaultValue: '',
-          description: 'Change page description',
-          getValue: async () => {
-            return page.description || '';
-          },
-          onDidChange: async (value) => {
-            if (typeof value === 'string') {
-              await this.application.dataProviders.project().collection<IPage>('pages').doc(key).field('description').set(value);
-            }
-          },
-        }),
-      ];
+      const pages = await this.application.dataProviders.project().collection<IPage>('pages').value();
+      let [item, path] = this.deepSearch(this.application.dataProviders.project().collection<IPage>('pages'), key, pages);
+      if (!item) {
+        const components = await this.application.dataProviders.project().collection<IComponent>('components').value();
+        [item, path] = this.deepSearch(this.application.dataProviders.project().collection<IPage>('components'), key, components);
+      } else if (!item) {
+        const services = await this.application.dataProviders.project().collection<IService>('services').value();
+        [item, path] = this.deepSearch(this.application.dataProviders.project().collection<IPage>('services'), key, services);
+      }
 
-      const component = await this.application.dataProviders.project().collection<IComponent>('components').doc(key).value();
-      if (component) return [
-        new FieldDescriptor({
-          key: crypto.randomUUID(),
-          label: 'Name',
-          name: 'name',
-          type: 'text',
-          children: false,
-          icon: '',
-          defaultValue: '',
-          description: 'Change component name',
-          getValue: async () => {
-            return component.name;
-          },
-          onDidChange: async (value) => {
-            if (typeof value === 'string') {
-              await this.application.dataProviders.project().collection<IComponent>('components').doc(key).field('name').set(value);
-            }
-          },
-        }),
-        new FieldDescriptor({
-          key: crypto.randomUUID(),
-          label: 'Description',
-          name: 'description',
-          type: 'longText',
-          children: false,
-          icon: '',
-          defaultValue: '',
-          description: 'Change component description',
-          getValue: async () => {
-            return component.description || '';
-          },
-          onDidChange: async (value) => {
-            if (typeof value === 'string') {
-              await this.application.dataProviders.project().collection<IComponent>('components').doc(key).field('description').set(value);
-            }
-          },
-        }),
-      ];
+      switch (item?.type) {
+        case 'page': return [
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Name',
+            name: 'name',
+            type: 'text',
+            children: false,
+            icon: '',
+            defaultValue: '',
+            description: 'Change page name',
+            getValue: async () => {
+              if (path) return await path.field('name').value();
+              return item.name;
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('name').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Description',
+            name: 'description',
+            type: 'longText',
+            children: false,
+            icon: '',
+            defaultValue: '',
+            description: 'Change page description',
+            getValue: async () => {
+              if (path) return await path.field('description').value() || '';
+              return item.description || '';
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('description').set(value);
+              }
+            },
+          }),
+        ];
+        case 'component': return [
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Name',
+            name: 'name',
+            type: 'text',
+            children: false,
+            icon: '',
+            defaultValue: '',
+            description: 'Change component name',
+            getValue: async () => {
+              if (path) return await path.field('name').value();
+              return item.name;
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('name').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Description',
+            name: 'description',
+            type: 'longText',
+            children: false,
+            icon: '',
+            defaultValue: '',
+            description: 'Change component description',
+            getValue: async () => {
+              if (path) return await path.field('description').value() || '';
+              return item.description || '';
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('description').set(value);
+              }
+            },
+          }),
+        ];
+        case 'service': return [
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Name',
+            name: 'name',
+            type: 'text',
+            children: false,
+            icon: '',
+            defaultValue: '',
+            description: 'Change service name',
+            getValue: async () => {
+              if (path) return await path.field('name').value();
+              return item.name;
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('name').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Description',
+            name: 'description',
+            type: 'longText',
+            children: false,
+            icon: '',
+            defaultValue: '',
+            description: 'Change service description',
+            getValue: async () => {
+              if (path) return await path.field('description').value() || '';
+              return item.description || '';
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('description').set(value);
+              }
+            },
+          }),
+        ];
+        case 'folder': return [
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Name',
+            name: 'name',
+            type: 'text',
+            children: false,
+            icon: '',
+            defaultValue: '',
+            description: 'Change folder name',
+            getValue: async () => {
+              if (path) return await path.field('name').value();
+              return item.name;
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('name').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Description',
+            name: 'description',
+            type: 'longText',
+            children: false,
+            icon: '',
+            defaultValue: '',
+            description: 'Change page description',
+            getValue: async () => {
+              if (path) return await path.field('description').value() || '';
+              return item.description || '';
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('description').set(value);
+              }
+            },
+          }),
+        ];
 
-      const service = await this.application.dataProviders.project().collection<IService>('services').doc(key).value();
-      if (service) return [
-        new FieldDescriptor({
-          key: crypto.randomUUID(),
-          label: 'Name',
-          name: 'name',
-          type: 'text',
-          children: false,
-          icon: '',
-          defaultValue: '',
-          description: 'Change service name',
-          getValue: async () => {
-            return service.name;
-          },
-          onDidChange: async (value) => {
-            if (typeof value === 'string') {
-              await this.application.dataProviders.project().collection<IService>('services').doc(key).field('name').set(value);
-            }
-          },
-        }),
-        new FieldDescriptor({
-          key: crypto.randomUUID(),
-          label: 'Description',
-          name: 'description',
-          type: 'longText',
-          children: false,
-          icon: '',
-          defaultValue: '',
-          description: 'Change service description',
-          getValue: async () => {
-            return service.description || '';
-          },
-          onDidChange: async (value) => {
-            if (typeof value === 'string') {
-              await this.application.dataProviders.project().collection<IService>('services').doc(key).field('description').set(value);
-            }
-          },
-        }),
-      ];
+        default: return []
+      }
 
-      return [];
     }
   })
 
