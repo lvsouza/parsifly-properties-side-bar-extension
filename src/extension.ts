@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IService, IFolder, IDoc, ICollection } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IService, IFolder, IDoc, ICollection, IProject, TProjectType } from 'parsifly-extension-base';
 
 
 new class Extension extends ExtensionBase {
@@ -24,7 +24,7 @@ new class Extension extends ExtensionBase {
   });
 
 
-  deepSearch(base: ICollection<IPage | IComponent | IService | IFolder>, key: string, items: (IPage | IComponent | IService | IFolder)[]): [IPage | IComponent | IService | IFolder | undefined, IDoc<IPage | IComponent | IService | IFolder> | undefined] {
+  deepSearch(base: ICollection<IPage | IComponent | IService | IFolder>, key: string, items: (IPage | IComponent | IService | IFolder)[]): [IProject<TProjectType> | IPage | IComponent | IService | IFolder | undefined, IDoc<IPage | IComponent | IService | IFolder> | undefined] {
     for (const item of items) {
       if (item.id === key) return [item, base.doc(item.id)];
 
@@ -40,17 +40,85 @@ new class Extension extends ExtensionBase {
   defaultFieldsDescriptor = new FieldsDescriptor({
     key: 'default-fields',
     onGetFields: async (key) => {
-      const pages = await this.application.dataProviders.project().collection<IPage>('pages').value();
-      let [item, path] = this.deepSearch(this.application.dataProviders.project().collection<IPage>('pages'), key, pages);
-      if (!item) {
-        const components = await this.application.dataProviders.project().collection<IComponent>('components').value();
-        [item, path] = this.deepSearch(this.application.dataProviders.project().collection<IPage>('components'), key, components);
+      let item: any = await this.application.dataProviders.project().value();
+      let path: IDoc<any> = this.application.dataProviders.project();
+
+      if (item.id !== key) {
+        [item, path = path] = this.deepSearch(path.collection('pages'), key, item.pages);
+      } if (!item) {
+        [item, path = path] = this.deepSearch(path.collection('components'), key, item.components);
       } else if (!item) {
-        const services = await this.application.dataProviders.project().collection<IService>('services').value();
-        [item, path] = this.deepSearch(this.application.dataProviders.project().collection<IPage>('services'), key, services);
+        [item, path = path] = this.deepSearch(path.collection('services'), key, item.services);
       }
 
       switch (item?.type) {
+        case 'package':
+        case 'application': return [
+          new FieldDescriptor({
+            name: 'name',
+            type: 'text',
+            label: 'Name',
+            key: crypto.randomUUID(),
+            description: 'Change project name',
+            getValue: async () => {
+              if (path) return await path.field('name').value();
+              return item.name;
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('name').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            type: 'longText',
+            name: 'description',
+            label: 'Description',
+            key: crypto.randomUUID(),
+            description: 'Change project description',
+            getValue: async () => {
+              if (path) return await path.field('description').value() || '';
+              return item.description || '';
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('description').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            type: 'text',
+            name: 'version',
+            label: 'Version',
+            key: crypto.randomUUID(),
+            description: 'Change project version',
+            getValue: async () => {
+              if (path) return await path.field('version').value() || '';
+              return item.version || '';
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('version').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            name: 'public',
+            type: 'boolean',
+            label: 'Public',
+            key: crypto.randomUUID(),
+            description: 'Change project visibility',
+            getValue: async () => {
+              if (path) return await path.field('public').value() || false;
+              return item.public || false;
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'boolean' && path) {
+                await path.field('public').set(value);
+              }
+            },
+          }),
+        ];
         case 'page': return [
           new FieldDescriptor({
             key: crypto.randomUUID(),
@@ -214,7 +282,6 @@ new class Extension extends ExtensionBase {
 
         default: return []
       }
-
     }
   })
 
