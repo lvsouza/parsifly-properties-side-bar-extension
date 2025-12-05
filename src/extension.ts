@@ -4,23 +4,33 @@ import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, I
 new class Extension extends ExtensionBase {
 
   // View principal: Properties
-  private propertiesView = new View({
+  propertiesView = new View({
     key: 'properties-side-bar',
-    dataProvider: new FormProvider({
-      key: 'properties-data-provider',
-      getFields: async () => {
-        const selectedKeys = await this.application.selection.get();
-        if (!selectedKeys.length) return [];
+    initialValue: {
+      title: 'Properties',
+      position: 'secondary',
+      icon: 'VscSymbolProperty',
+      description: 'Description da view',
+      dataProvider: new FormProvider({
+        key: 'properties-data-provider',
+        getFields: async () => {
+          const selectedKeys = await this.application.selection.get();
+          if (!selectedKeys.length) return [];
 
-        const selectedKey = selectedKeys[0];
+          const selectedKey = selectedKeys[0];
 
-        return await this.application.fields.get(selectedKey);
-      },
-    }),
-  });
+          return await this.application.fields.get(selectedKey);
+        },
+      }),
+    },
+    onDidMount: async (context) => {
+      const selectionUnsubscribe = this.application.selection.subscribe(async () => context.refetchData());
 
-  private selectionUnsubscribe = this.application.selection.subscribe(async () => {
-    await this.application.views.refresh(this.propertiesView);
+
+      context.onDidUnmount(async () => {
+        selectionUnsubscribe();
+      });
+    },
   });
 
 
@@ -36,19 +46,23 @@ new class Extension extends ExtensionBase {
 
     return [undefined, undefined];
   }
-
   defaultFieldsDescriptor = new FieldsDescriptor({
     key: 'default-fields',
     onGetFields: async (key) => {
-      let item: any = await this.application.dataProviders.project().value();
-      let path: IDoc<any> = this.application.dataProviders.project();
+      const itemProject: any = await this.application.dataProviders.project().value();
+      const pathProject: IDoc<any> = this.application.dataProviders.project();
+
+      let item: any = itemProject;
+      let path: IDoc<any> = pathProject;
 
       if (item.id !== key) {
-        [item, path = path] = this.deepSearch(path.collection('pages'), key, item.pages);
-      } if (!item) {
-        [item, path = path] = this.deepSearch(path.collection('components'), key, item.components);
-      } else if (!item) {
-        [item, path = path] = this.deepSearch(path.collection('services'), key, item.services);
+        [item, path = pathProject] = this.deepSearch(pathProject.collection('pages'), key, itemProject.pages);
+      }
+      if (!item) {
+        [item, path = pathProject] = this.deepSearch(pathProject.collection('components'), key, itemProject.components);
+      }
+      if (!item) {
+        [item, path = pathProject] = this.deepSearch(pathProject.collection('services'), key, itemProject.services);
       }
 
       switch (item?.type) {
@@ -286,8 +300,6 @@ new class Extension extends ExtensionBase {
   })
 
 
-
-
   async activate() {
     this.application.views.register(this.propertiesView);
     this.application.fields.register(this.defaultFieldsDescriptor);
@@ -298,7 +310,5 @@ new class Extension extends ExtensionBase {
   async deactivate() {
     this.application.views.unregister(this.propertiesView);
     this.application.fields.unregister(this.defaultFieldsDescriptor);
-
-    this.selectionUnsubscribe();
   }
 };

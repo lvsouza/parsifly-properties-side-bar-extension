@@ -12,20 +12,5 @@
     "fields": true,
     "edition": true,
     "selection": true
-  },
-  "views": [
-    {
-      "actions": [],
-      "type": "view",
-      "title": "Properties",
-      "icon": "VscSymbolProperty",
-      "key": "properties-side-bar",
-      "positionPreferred": "secondary",
-      "description": "Show the project resource properties in one place",
-      "dataProvider": {
-        "type": "form",
-        "key": "properties-data-provider"
-      }
-    }
-  ]
+  }
 }
