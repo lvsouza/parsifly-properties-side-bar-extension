@@ -1,8 +1,10 @@
 {
   "name": "parsifly-extension-properties-side-bar",
-  "version": "1.0.2",
+  "version": "1.0.3",
+  "authorName": "Lucas Souza Dev",
+  "displayName": "Properties Side Bar",
+  "description": "This extension provide a properties side bar. It can be used to view and edit the properties of the project.",
   "module": "dist/index.js",
-  "manifest": "manifest.json",
   "private": false,
   "scripts": {
     "dev": "vite build --watch --sourcemap & vite",
