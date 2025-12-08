@@ -9,8 +9,8 @@ new class Extension extends ExtensionBase {
     initialValue: {
       title: 'Properties',
       position: 'secondary',
-      icon: 'VscSymbolProperty',
       description: 'Description da view',
+      icon: { name: 'VscSymbolProperty' },
       dataProvider: new FormProvider({
         key: 'properties-data-provider',
         getFields: async () => {
@@ -140,7 +140,6 @@ new class Extension extends ExtensionBase {
             name: 'name',
             type: 'text',
             children: false,
-            icon: '',
             defaultValue: '',
             description: 'Change page name',
             getValue: async () => {
@@ -159,7 +158,6 @@ new class Extension extends ExtensionBase {
             name: 'description',
             type: 'longText',
             children: false,
-            icon: '',
             defaultValue: '',
             description: 'Change page description',
             getValue: async () => {
@@ -180,7 +178,6 @@ new class Extension extends ExtensionBase {
             name: 'name',
             type: 'text',
             children: false,
-            icon: '',
             defaultValue: '',
             description: 'Change component name',
             getValue: async () => {
@@ -199,7 +196,6 @@ new class Extension extends ExtensionBase {
             name: 'description',
             type: 'longText',
             children: false,
-            icon: '',
             defaultValue: '',
             description: 'Change component description',
             getValue: async () => {
@@ -220,7 +216,6 @@ new class Extension extends ExtensionBase {
             name: 'name',
             type: 'text',
             children: false,
-            icon: '',
             defaultValue: '',
             description: 'Change service name',
             getValue: async () => {
@@ -239,7 +234,6 @@ new class Extension extends ExtensionBase {
             name: 'description',
             type: 'longText',
             children: false,
-            icon: '',
             defaultValue: '',
             description: 'Change service description',
             getValue: async () => {
@@ -260,7 +254,6 @@ new class Extension extends ExtensionBase {
             name: 'name',
             type: 'text',
             children: false,
-            icon: '',
             defaultValue: '',
             description: 'Change folder name',
             getValue: async () => {
@@ -279,7 +272,6 @@ new class Extension extends ExtensionBase {
             name: 'description',
             type: 'longText',
             children: false,
-            icon: '',
             defaultValue: '',
             description: 'Change page description',
             getValue: async () => {

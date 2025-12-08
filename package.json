@@ -1,6 +1,6 @@
 {
   "name": "parsifly-extension-properties-side-bar",
-  "version": "1.0.3",
+  "version": "1.0.7",
   "authorName": "Lucas Souza Dev",
   "displayName": "Properties Side Bar",
   "description": "This extension provide a properties side bar. It can be used to view and edit the properties of the project.",
@@ -11,7 +11,7 @@
     "build": "vite build"
   },
   "dependencies": {
-    "parsifly-extension-base": "^1.2.15"
+    "parsifly-extension-base": "^1.2.17"
   },
   "devDependencies": {
     "typescript": "^5.6.2",
