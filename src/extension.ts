@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IAction, IFolder, IDoc, ICollection, IProject, TProjectType } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IAction, IFolder, IDoc, ICollection, IProject, IStructure } from 'parsifly-extension-base';
 
 
 new class Extension extends ExtensionBase {
@@ -34,7 +34,7 @@ new class Extension extends ExtensionBase {
   });
 
 
-  deepSearch(base: ICollection<IPage | IComponent | IAction | IFolder>, key: string, items: (IPage | IComponent | IAction | IFolder)[]): [IProject<TProjectType> | IPage | IComponent | IAction | IFolder | undefined, IDoc<IPage | IComponent | IAction | IFolder> | undefined] {
+  deepSearch(base: ICollection<IPage | IComponent | IAction | IFolder | IStructure>, key: string, items: (IPage | IComponent | IAction | IFolder | IStructure)[]): [IProject | IPage | IComponent | IAction | IFolder | IStructure | undefined, IDoc<IPage | IComponent | IAction | IFolder | IStructure> | undefined] {
     for (const item of items) {
       if (item.id === key) return [item, base.doc(item.id)];
 
@@ -64,9 +64,11 @@ new class Extension extends ExtensionBase {
       if (!item) {
         [item, path = pathProject] = this.deepSearch(pathProject.collection('actions'), key, itemProject.actions);
       }
+      if (!item) {
+        [item, path = pathProject] = this.deepSearch(pathProject.collection('structures'), key, itemProject.structures);
+      }
 
       switch (item?.type) {
-        case 'package':
         case 'application': return [
           new FieldDescriptor({
             name: 'name',
@@ -274,6 +276,44 @@ new class Extension extends ExtensionBase {
             children: false,
             defaultValue: '',
             description: 'Change page description',
+            getValue: async () => {
+              if (path) return await path.field('description').value() || '';
+              return item.description || '';
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('description').set(value);
+              }
+            },
+          }),
+        ];
+        case 'structure': return [
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Name',
+            name: 'name',
+            type: 'text',
+            children: false,
+            defaultValue: '',
+            description: 'Change structure name',
+            getValue: async () => {
+              if (path) return await path.field('name').value();
+              return item.name;
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('name').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Description',
+            name: 'description',
+            type: 'longText',
+            children: false,
+            defaultValue: '',
+            description: 'Change structure description',
             getValue: async () => {
               if (path) return await path.field('description').value() || '';
               return item.description || '';
