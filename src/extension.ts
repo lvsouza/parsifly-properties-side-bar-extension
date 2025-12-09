@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IService, IFolder, IDoc, ICollection, IProject, TProjectType } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IAction, IFolder, IDoc, ICollection, IProject, TProjectType } from 'parsifly-extension-base';
 
 
 new class Extension extends ExtensionBase {
@@ -34,7 +34,7 @@ new class Extension extends ExtensionBase {
   });
 
 
-  deepSearch(base: ICollection<IPage | IComponent | IService | IFolder>, key: string, items: (IPage | IComponent | IService | IFolder)[]): [IProject<TProjectType> | IPage | IComponent | IService | IFolder | undefined, IDoc<IPage | IComponent | IService | IFolder> | undefined] {
+  deepSearch(base: ICollection<IPage | IComponent | IAction | IFolder>, key: string, items: (IPage | IComponent | IAction | IFolder)[]): [IProject<TProjectType> | IPage | IComponent | IAction | IFolder | undefined, IDoc<IPage | IComponent | IAction | IFolder> | undefined] {
     for (const item of items) {
       if (item.id === key) return [item, base.doc(item.id)];
 
@@ -62,7 +62,7 @@ new class Extension extends ExtensionBase {
         [item, path = pathProject] = this.deepSearch(pathProject.collection('components'), key, itemProject.components);
       }
       if (!item) {
-        [item, path = pathProject] = this.deepSearch(pathProject.collection('services'), key, itemProject.services);
+        [item, path = pathProject] = this.deepSearch(pathProject.collection('actions'), key, itemProject.actions);
       }
 
       switch (item?.type) {
@@ -209,7 +209,7 @@ new class Extension extends ExtensionBase {
             },
           }),
         ];
-        case 'service': return [
+        case 'action': return [
           new FieldDescriptor({
             key: crypto.randomUUID(),
             label: 'Name',
@@ -217,7 +217,7 @@ new class Extension extends ExtensionBase {
             type: 'text',
             children: false,
             defaultValue: '',
-            description: 'Change service name',
+            description: 'Change action name',
             getValue: async () => {
               if (path) return await path.field('name').value();
               return item.name;
@@ -235,7 +235,7 @@ new class Extension extends ExtensionBase {
             type: 'longText',
             children: false,
             defaultValue: '',
-            description: 'Change service description',
+            description: 'Change action description',
             getValue: async () => {
               if (path) return await path.field('description').value() || '';
               return item.description || '';
