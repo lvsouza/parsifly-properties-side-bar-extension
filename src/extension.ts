@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IAction, IFolder, IDoc, ICollection, IProject, IStructure } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IAction, IFolder, IDoc, ICollection, IProject, IStructure, IStructureAttribute } from 'parsifly-extension-base';
 
 
 new class Extension extends ExtensionBase {
@@ -26,7 +26,6 @@ new class Extension extends ExtensionBase {
     onDidMount: async (context) => {
       const selectionUnsubscribe = this.application.selection.subscribe(async () => context.refetchData());
 
-
       context.onDidUnmount(async () => {
         selectionUnsubscribe();
       });
@@ -34,12 +33,20 @@ new class Extension extends ExtensionBase {
   });
 
 
-  deepSearch(base: ICollection<IPage | IComponent | IAction | IFolder | IStructure>, key: string, items: (IPage | IComponent | IAction | IFolder | IStructure)[]): [IProject | IPage | IComponent | IAction | IFolder | IStructure | undefined, IDoc<IPage | IComponent | IAction | IFolder | IStructure> | undefined] {
+  deepSearch(base: ICollection<IPage | IComponent | IAction | IFolder | IStructure | IStructureAttribute>, key: string, items: (IPage | IComponent | IAction | IFolder | IStructure | IStructureAttribute)[]): [IProject | IPage | IComponent | IAction | IFolder | IStructure | IStructureAttribute | undefined, IDoc<IPage | IComponent | IAction | IFolder | IStructure | IStructureAttribute> | undefined] {
     for (const item of items) {
       if (item.id === key) return [item, base.doc(item.id)];
 
       if (item.type === 'folder') {
         const [result, resultPath] = this.deepSearch(base.doc(item.id).collection('content'), key, item.content)
+        if (result) return [result, resultPath];
+      }
+      if (item.type === 'structure') {
+        const [result, resultPath] = this.deepSearch(base.doc(item.id).collection('attributes'), key, item.attributes)
+        if (result) return [result, resultPath];
+      }
+      if (item.type === 'structure_attribute') {
+        const [result, resultPath] = this.deepSearch(base.doc(item.id).collection('attributes'), key, item.attributes)
         if (result) return [result, resultPath];
       }
     }
@@ -314,6 +321,44 @@ new class Extension extends ExtensionBase {
             children: false,
             defaultValue: '',
             description: 'Change structure description',
+            getValue: async () => {
+              if (path) return await path.field('description').value() || '';
+              return item.description || '';
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('description').set(value);
+              }
+            },
+          }),
+        ];
+        case 'structure_attribute': return [
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Name',
+            name: 'name',
+            type: 'text',
+            children: false,
+            defaultValue: '',
+            description: 'Change attribute name',
+            getValue: async () => {
+              if (path) return await path.field('name').value();
+              return item.name;
+            },
+            onDidChange: async (value) => {
+              if (typeof value === 'string' && path) {
+                await path.field('name').set(value);
+              }
+            },
+          }),
+          new FieldDescriptor({
+            key: crypto.randomUUID(),
+            label: 'Description',
+            name: 'description',
+            type: 'longText',
+            children: false,
+            defaultValue: '',
+            description: 'Change attribute description',
             getValue: async () => {
               if (path) return await path.field('description').value() || '';
               return item.description || '';
