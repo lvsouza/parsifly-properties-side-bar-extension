@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IPage, IComponent, IAction, IFolder, IDoc, ICollection, IProject, IStructure, IStructureAttribute } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor } from 'parsifly-extension-base';
 
 
 new class Extension extends ExtensionBase {
@@ -33,47 +33,11 @@ new class Extension extends ExtensionBase {
   });
 
 
-  deepSearch(base: ICollection<IPage | IComponent | IAction | IFolder | IStructure | IStructureAttribute>, key: string, items: (IPage | IComponent | IAction | IFolder | IStructure | IStructureAttribute)[]): [IProject | IPage | IComponent | IAction | IFolder | IStructure | IStructureAttribute | undefined, IDoc<IPage | IComponent | IAction | IFolder | IStructure | IStructureAttribute> | undefined] {
-    for (const item of items) {
-      if (item.id === key) return [item, base.doc(item.id)];
-
-      if (item.type === 'folder') {
-        const [result, resultPath] = this.deepSearch(base.doc(item.id).collection('content'), key, item.content)
-        if (result) return [result, resultPath];
-      }
-      if (item.type === 'structure') {
-        const [result, resultPath] = this.deepSearch(base.doc(item.id).collection('attributes'), key, item.attributes)
-        if (result) return [result, resultPath];
-      }
-      if (item.type === 'structure_attribute') {
-        const [result, resultPath] = this.deepSearch(base.doc(item.id).collection('attributes'), key, item.attributes)
-        if (result) return [result, resultPath];
-      }
-    }
-
-    return [undefined, undefined];
-  }
   defaultFieldsDescriptor = new FieldsDescriptor({
     key: 'default-fields',
     onGetFields: async (key) => {
-      const itemProject: any = await this.application.dataProviders.project().value();
-      const pathProject: IDoc<any> = this.application.dataProviders.project();
+      const [item, path] = await this.application.dataProviders.findAnyResourceByKey(key);
 
-      let item: any = itemProject;
-      let path: IDoc<any> = pathProject;
-
-      if (item.id !== key) {
-        [item, path = pathProject] = this.deepSearch(pathProject.collection('pages'), key, itemProject.pages);
-      }
-      if (!item) {
-        [item, path = pathProject] = this.deepSearch(pathProject.collection('components'), key, itemProject.components);
-      }
-      if (!item) {
-        [item, path = pathProject] = this.deepSearch(pathProject.collection('actions'), key, itemProject.actions);
-      }
-      if (!item) {
-        [item, path = pathProject] = this.deepSearch(pathProject.collection('structures'), key, itemProject.structures);
-      }
 
       switch (item?.type) {
         case 'application': return [
@@ -137,7 +101,7 @@ new class Extension extends ExtensionBase {
             },
             onDidChange: async (value) => {
               if (typeof value === 'boolean' && path) {
-                await path.field('public').set(value);
+                await path.field('public').set<boolean>(value);
               }
             },
           }),
