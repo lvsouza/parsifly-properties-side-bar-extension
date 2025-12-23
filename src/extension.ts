@@ -1,4 +1,5 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IDoc, IStructureAttribute } from 'parsifly-extension-base';
+import { getStructureAttributeProperties } from './mapping/structures';
 
 
 new class Extension extends ExtensionBase {
@@ -37,303 +38,284 @@ new class Extension extends ExtensionBase {
     key: 'default-fields',
     onGetFields: async (key) => {
       const [item, path] = await this.application.dataProviders.findAnyResourceByKey(key);
-
+      if (!path) return [];
 
       switch (item?.type) {
         case 'application': return [
           new FieldDescriptor({
-            name: 'name',
-            type: 'text',
-            label: 'Name',
             key: crypto.randomUUID(),
-            description: 'Change project name',
-            getValue: async () => {
-              if (path) return await path.field('name').value();
-              return item.name;
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('name').set(value);
-              }
+            initialValue: {
+              name: 'name',
+              type: 'text',
+              label: 'Name',
+              description: 'Change project name',
+              getValue: async () => {
+                if (path) return await path.field('name').value();
+                return item.name;
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('name').set(value);
+                }
+              },
             },
           }),
           new FieldDescriptor({
-            type: 'longText',
-            name: 'description',
-            label: 'Description',
             key: crypto.randomUUID(),
-            description: 'Change project description',
-            getValue: async () => {
-              if (path) return await path.field('description').value() || '';
-              return item.description || '';
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('description').set(value);
-              }
-            },
+            initialValue: {
+              type: 'longText',
+              name: 'description',
+              label: 'Description',
+              description: 'Change project description',
+              getValue: async () => {
+                if (path) return await path.field('description').value() || '';
+                return item.description || '';
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('description').set(value);
+                }
+              },
+            }
           }),
           new FieldDescriptor({
-            type: 'text',
-            name: 'version',
-            label: 'Version',
             key: crypto.randomUUID(),
-            description: 'Change project version',
-            getValue: async () => {
-              if (path) return await path.field('version').value() || '';
-              return item.version || '';
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('version').set(value);
-              }
-            },
+            initialValue: {
+              type: 'text',
+              name: 'version',
+              label: 'Version',
+              description: 'Change project version',
+              getValue: async () => {
+                if (path) return await path.field('version').value() || '';
+                return item.version || '';
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('version').set(value);
+                }
+              },
+            }
           }),
           new FieldDescriptor({
-            name: 'public',
-            type: 'boolean',
-            label: 'Public',
             key: crypto.randomUUID(),
-            description: 'Change project visibility',
-            getValue: async () => {
-              if (path) return await path.field('public').value() || false;
-              return item.public || false;
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'boolean' && path) {
-                await path.field('public').set<boolean>(value);
-              }
+            initialValue: {
+              name: 'public',
+              type: 'boolean',
+              label: 'Public',
+              description: 'Change project visibility',
+              getValue: async () => {
+                if (path) return await path.field('public').value() || false;
+                return item.public || false;
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'boolean' && path) {
+                  await path.field('public').set<boolean>(value);
+                }
+              },
             },
           }),
         ];
         case 'page': return [
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Name',
-            name: 'name',
-            type: 'text',
-            children: false,
-            defaultValue: '',
-            description: 'Change page name',
-            getValue: async () => {
-              if (path) return await path.field('name').value();
-              return item.name;
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('name').set(value);
-              }
-            },
+            initialValue: {
+              label: 'Name',
+              name: 'name',
+              type: 'text',
+              defaultValue: '',
+              description: 'Change page name',
+              getValue: async () => {
+                if (path) return await path.field('name').value();
+                return item.name;
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('name').set(value);
+                }
+              },
+            }
           }),
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Description',
-            name: 'description',
-            type: 'longText',
-            children: false,
-            defaultValue: '',
-            description: 'Change page description',
-            getValue: async () => {
-              if (path) return await path.field('description').value() || '';
-              return item.description || '';
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('description').set(value);
-              }
+            initialValue: {
+              label: 'Description',
+              name: 'description',
+              type: 'longText',
+              defaultValue: '',
+              description: 'Change page description',
+              getValue: async () => {
+                if (path) return await path.field('description').value() || '';
+                return item.description || '';
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('description').set(value);
+                }
+              },
             },
           }),
         ];
         case 'component': return [
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Name',
-            name: 'name',
-            type: 'text',
-            children: false,
-            defaultValue: '',
-            description: 'Change component name',
-            getValue: async () => {
-              if (path) return await path.field('name').value();
-              return item.name;
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('name').set(value);
-              }
-            },
+            initialValue: {
+              label: 'Name',
+              name: 'name',
+              type: 'text',
+              defaultValue: '',
+              description: 'Change component name',
+              getValue: async () => {
+                if (path) return await path.field('name').value();
+                return item.name;
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('name').set(value);
+                }
+              },
+            }
           }),
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Description',
-            name: 'description',
-            type: 'longText',
-            children: false,
-            defaultValue: '',
-            description: 'Change component description',
-            getValue: async () => {
-              if (path) return await path.field('description').value() || '';
-              return item.description || '';
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('description').set(value);
-              }
+            initialValue: {
+              label: 'Description',
+              name: 'description',
+              type: 'longText',
+              defaultValue: '',
+              description: 'Change component description',
+              getValue: async () => {
+                if (path) return await path.field('description').value() || '';
+                return item.description || '';
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('description').set(value);
+                }
+              },
             },
           }),
         ];
         case 'action': return [
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Name',
-            name: 'name',
-            type: 'text',
-            children: false,
-            defaultValue: '',
-            description: 'Change action name',
-            getValue: async () => {
-              if (path) return await path.field('name').value();
-              return item.name;
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('name').set(value);
-              }
-            },
+            initialValue: {
+              label: 'Name',
+              name: 'name',
+              type: 'text',
+              defaultValue: '',
+              description: 'Change action name',
+              getValue: async () => {
+                if (path) return await path.field('name').value();
+                return item.name;
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('name').set(value);
+                }
+              },
+            }
           }),
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Description',
-            name: 'description',
-            type: 'longText',
-            children: false,
-            defaultValue: '',
-            description: 'Change action description',
-            getValue: async () => {
-              if (path) return await path.field('description').value() || '';
-              return item.description || '';
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('description').set(value);
-              }
+            initialValue: {
+              label: 'Description',
+              name: 'description',
+              type: 'longText',
+              defaultValue: '',
+              description: 'Change action description',
+              getValue: async () => {
+                if (path) return await path.field('description').value() || '';
+                return item.description || '';
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('description').set(value);
+                }
+              },
             },
           }),
         ];
         case 'folder': return [
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Name',
-            name: 'name',
-            type: 'text',
-            children: false,
-            defaultValue: '',
-            description: 'Change folder name',
-            getValue: async () => {
-              if (path) return await path.field('name').value();
-              return item.name;
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('name').set(value);
-              }
-            },
+            initialValue: {
+              label: 'Name',
+              name: 'name',
+              type: 'text',
+              defaultValue: '',
+              description: 'Change folder name',
+              getValue: async () => {
+                if (path) return await path.field('name').value();
+                return item.name;
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('name').set(value);
+                }
+              },
+            }
           }),
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Description',
-            name: 'description',
-            type: 'longText',
-            children: false,
-            defaultValue: '',
-            description: 'Change page description',
-            getValue: async () => {
-              if (path) return await path.field('description').value() || '';
-              return item.description || '';
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('description').set(value);
-              }
+            initialValue: {
+              label: 'Description',
+              name: 'description',
+              type: 'longText',
+              defaultValue: '',
+              description: 'Change page description',
+              getValue: async () => {
+                if (path) return await path.field('description').value() || '';
+                return item.description || '';
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('description').set(value);
+                }
+              },
             },
           }),
         ];
         case 'structure': return [
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Name',
-            name: 'name',
-            type: 'text',
-            children: false,
-            defaultValue: '',
-            description: 'Change structure name',
-            getValue: async () => {
-              if (path) return await path.field('name').value();
-              return item.name;
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('name').set(value);
-              }
-            },
+            initialValue: {
+              label: 'Name',
+              name: 'name',
+              type: 'text',
+              defaultValue: '',
+              description: 'Change structure name',
+              getValue: async () => {
+                if (path) return await path.field('name').value();
+                return item.name;
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('name').set(value);
+                }
+              },
+            }
           }),
           new FieldDescriptor({
             key: crypto.randomUUID(),
-            label: 'Description',
-            name: 'description',
-            type: 'longText',
-            children: false,
-            defaultValue: '',
-            description: 'Change structure description',
-            getValue: async () => {
-              if (path) return await path.field('description').value() || '';
-              return item.description || '';
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('description').set(value);
-              }
+            initialValue: {
+              label: 'Description',
+              name: 'description',
+              type: 'longText',
+              defaultValue: '',
+              description: 'Change structure description',
+              getValue: async () => {
+                if (path) return await path.field('description').value() || '';
+                return item.description || '';
+              },
+              onDidChange: async (value) => {
+                if (typeof value === 'string' && path) {
+                  await path.field('description').set(value);
+                }
+              },
             },
           }),
         ];
-        case 'structure_attribute': return [
-          new FieldDescriptor({
-            key: crypto.randomUUID(),
-            label: 'Name',
-            name: 'name',
-            type: 'text',
-            children: false,
-            defaultValue: '',
-            description: 'Change attribute name',
-            getValue: async () => {
-              if (path) return await path.field('name').value();
-              return item.name;
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('name').set(value);
-              }
-            },
-          }),
-          new FieldDescriptor({
-            key: crypto.randomUUID(),
-            label: 'Description',
-            name: 'description',
-            type: 'longText',
-            children: false,
-            defaultValue: '',
-            description: 'Change attribute description',
-            getValue: async () => {
-              if (path) return await path.field('description').value() || '';
-              return item.description || '';
-            },
-            onDidChange: async (value) => {
-              if (typeof value === 'string' && path) {
-                await path.field('description').set(value);
-              }
-            },
-          }),
-        ];
+        case 'structure_attribute': return getStructureAttributeProperties(this.application, item, path as IDoc<IStructureAttribute>)
 
         default: return []
       }
