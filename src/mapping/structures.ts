@@ -51,11 +51,11 @@ export const getStructureAttributeProperties = (application: TApplication, item:
         defaultValue: true,
         description: 'Change attribute is required',
         getValue: async () => {
-          if (path) return await path.field('required').value() || true;
-          return item.required || true;
+          if (path) return await path.field('required').value();
+          return item.required;
         },
         onDidChange: async (value) => {
-          if (typeof value === 'string' && path) {
+          if (typeof value === 'boolean' && path) {
             await path.field('required').set(value);
           }
         },
@@ -223,7 +223,7 @@ export const getStructureAttributeProperties = (application: TApplication, item:
           return item.defaultValue ?? null;
         },
         onDidChange: async (value) => {
-          if (typeof value === 'string' && path) {
+          if (path) {
             await path.field('defaultValue').set(value);
           }
         },
