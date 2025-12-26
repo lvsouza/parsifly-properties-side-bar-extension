@@ -1,8 +1,7 @@
-import { FieldDescriptor, IDoc, IStructureAttribute, TApplication, TDataType } from 'parsifly-extension-base';
-import { TFieldDescriptorType } from 'parsifly-extension-base/dist/types/lib/shared/descriptors/TFieldDescriptor';
+import { CompletionViewItem, FieldDescriptor, IDoc, IStructureAttribute, TApplication, TDataType, TFieldDescriptorType } from 'parsifly-extension-base';
 
 
-export const getStructureAttributeProperties = (_application: TApplication, item: IStructureAttribute, path: IDoc<IStructureAttribute>) => {
+export const getStructureAttributeProperties = (application: TApplication, item: IStructureAttribute, path: IDoc<IStructureAttribute>) => {
 
   return [
     new FieldDescriptor({
@@ -27,10 +26,10 @@ export const getStructureAttributeProperties = (_application: TApplication, item
     new FieldDescriptor({
       key: crypto.randomUUID(),
       initialValue: {
-        label: 'Description',
-        name: 'description',
-        type: 'longText',
+        type: 'textarea',
         defaultValue: '',
+        name: 'description',
+        label: 'Description',
         description: 'Change attribute description',
         getValue: async () => {
           if (path) return await path.field('description').value() || '';
@@ -67,19 +66,76 @@ export const getStructureAttributeProperties = (_application: TApplication, item
       initialValue: {
         label: 'Data type',
         name: 'dataType',
-        type: 'text',
         defaultValue: true,
+        type: 'autocomplete',
         description: 'Change attribute type',
-        getValue: async () => {
-          if (path) return await path.field('dataType').value() || true;
-          return item.dataType || true;
-        },
-        onDidChange: async (value) => {
-          if (typeof value === 'string' && path) {
-            await path.field('dataType').set(value);
+        getValue: async (context) => {
+          if (!path) return null;
+
+          const dataTypeValue = await path.field('dataType').value();
+          const completions = await context.getCompletions()
+
+          switch (dataTypeValue) {
+            case 'null':
+            case 'string':
+            case 'number':
+            case 'boolean':
+            case 'binary': {
+              const completion = completions.find(completion => completion.value === dataTypeValue);
+              return completion || null;
+            }
+            case 'object': {
+              const attributes = await path.collection('attributes').value();
+              return new CompletionViewItem({
+                key: 'object',
+                initialValue: {
+                  value: 'object',
+                  icon: { type: 'object' },
+                  label: `Object of<${attributes.map(attribute => attribute.dataType).join(',')}>`,
+                },
+              }).serialize();
+            }
+            case 'array_object': {
+              const attributes = await path.collection('attributes').value();
+              return new CompletionViewItem({
+                key: 'object',
+                initialValue: {
+                  value: 'array_object',
+                  icon: { type: 'array' },
+                  label: `Array of<${attributes.map(attribute => attribute.dataType).join(',')}>`,
+                },
+              }).serialize();
+            }
+            case 'structure': {
+              const completion = completions.find(completion => completion.value === dataTypeValue);
+              return completion || null;
+            }
+            case 'array_structure': {
+              const completion = completions.find(completion => completion.value === dataTypeValue);
+              return completion || null;
+            }
+
+            default: return dataTypeValue;
           }
         },
-      }
+        onDidChange: async (value, context) => {
+          console.log(value)
+          await path.field('dataType').set(value);
+          await context.reloadValue();
+        },
+        getCompletions: async (query, context) => {
+          console.log('getCompletions', query, context);
+
+          const result = await application.completions.get({
+            kind: 'type',
+            visibility: {
+              type: 'structure_attribute',
+            }
+          });
+
+          return result;
+        },
+      },
     }),
     new FieldDescriptor({
       key: crypto.randomUUID(),
@@ -89,8 +145,8 @@ export const getStructureAttributeProperties = (_application: TApplication, item
         type: 'boolean',
         description: 'Change attribute is defaultValue',
         getValue: async () => {
-          if (path) return await path.field('defaultValue').value() || true;
-          return item.defaultValue || true;
+          if (path) return await path.field('defaultValue').value() ?? true;
+          return item.defaultValue ?? true;
         },
         onDidChange: async (value) => {
           if (typeof value === 'string' && path) {
@@ -102,10 +158,10 @@ export const getStructureAttributeProperties = (_application: TApplication, item
         const dataType = await path.field('dataType').value();
         const fieldType = getFieldTypeByDataType(dataType);
         if (fieldType) {
-          await path.field('defaultValue').set('');
           await context.set('type', fieldType);
           await context.set('disabled', false);
         } else {
+          await path.field('defaultValue').set('');
           await context.set('disabled', true);
           await context.set('type', 'text');
         }
@@ -113,10 +169,10 @@ export const getStructureAttributeProperties = (_application: TApplication, item
         const subscription = await path.field('dataType').onValue(async value => {
           const fieldType = getFieldTypeByDataType(value);
           if (fieldType) {
-            await path.field('defaultValue').set('');
             await context.set('type', fieldType);
             await context.set('disabled', false);
           } else {
+            await path.field('defaultValue').set('');
             await context.set('disabled', true);
             await context.set('type', 'text');
           }

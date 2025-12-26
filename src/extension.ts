@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IDoc, IStructureAttribute } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IDoc, IStructureAttribute, CompletionsDescriptor, CompletionViewItem, IStructure } from 'parsifly-extension-base';
 import { getStructureAttributeProperties } from './mapping/structures';
 
 
@@ -63,7 +63,7 @@ new class Extension extends ExtensionBase {
           new FieldDescriptor({
             key: crypto.randomUUID(),
             initialValue: {
-              type: 'longText',
+              type: 'textarea',
               name: 'description',
               label: 'Description',
               description: 'Change project description',
@@ -140,7 +140,7 @@ new class Extension extends ExtensionBase {
             initialValue: {
               label: 'Description',
               name: 'description',
-              type: 'longText',
+              type: 'textarea',
               defaultValue: '',
               description: 'Change page description',
               getValue: async () => {
@@ -180,7 +180,7 @@ new class Extension extends ExtensionBase {
             initialValue: {
               label: 'Description',
               name: 'description',
-              type: 'longText',
+              type: 'textarea',
               defaultValue: '',
               description: 'Change component description',
               getValue: async () => {
@@ -220,7 +220,7 @@ new class Extension extends ExtensionBase {
             initialValue: {
               label: 'Description',
               name: 'description',
-              type: 'longText',
+              type: 'textarea',
               defaultValue: '',
               description: 'Change action description',
               getValue: async () => {
@@ -260,7 +260,7 @@ new class Extension extends ExtensionBase {
             initialValue: {
               label: 'Description',
               name: 'description',
-              type: 'longText',
+              type: 'textarea',
               defaultValue: '',
               description: 'Change page description',
               getValue: async () => {
@@ -300,7 +300,7 @@ new class Extension extends ExtensionBase {
             initialValue: {
               label: 'Description',
               name: 'description',
-              type: 'longText',
+              type: 'textarea',
               defaultValue: '',
               description: 'Change structure description',
               getValue: async () => {
@@ -322,10 +322,89 @@ new class Extension extends ExtensionBase {
     }
   })
 
+  basicCompletions = new CompletionsDescriptor({
+    key: 'basic',
+    onGetCompletions: async (intent) => {
+      console.log('intent', intent)
+
+      const structures = await this.application.dataProviders.project().collection<IStructure>('structures').value()
+
+      return [
+        new CompletionViewItem({
+          key: 'string',
+          initialValue: {
+            label: 'String',
+            value: 'string',
+            icon: { type: 'string' },
+            description: 'Base type for strings',
+          },
+        }),
+        new CompletionViewItem({
+          key: 'number',
+          initialValue: {
+            label: 'Number',
+            value: 'number',
+            icon: { type: 'number' },
+            description: 'Base type for numbers',
+          },
+        }),
+        new CompletionViewItem({
+          key: 'boolean',
+          initialValue: {
+            label: 'Boolean',
+            value: 'boolean',
+            icon: { type: 'boolean' },
+            description: 'Base type for booleans',
+          },
+        }),
+        new CompletionViewItem({
+          key: 'binary',
+          initialValue: {
+            label: 'Binary',
+            value: 'binary',
+            icon: { type: 'binary' },
+            description: 'Base type for binary',
+          },
+        }),
+        new CompletionViewItem({
+          key: 'object',
+          initialValue: {
+            label: 'Object',
+            value: 'object',
+            icon: { type: 'object' },
+            description: 'Allow to add more attributes',
+          },
+        }),
+        new CompletionViewItem({
+          key: 'array',
+          initialValue: {
+            label: 'Array',
+            value: 'array',
+            icon: { type: 'array' },
+            description: 'List of some primitive or composed type',
+          },
+        }),
+
+        ...structures.map(structure => (
+          new CompletionViewItem({
+            key: structure.id,
+            initialValue: {
+              label: structure.name,
+              icon: { type: 'structure' },
+              description: structure.description || '',
+              value: { type: 'structure', referenceId: structure.id },
+            },
+          })
+        )),
+      ];
+    }
+  })
+
 
   async activate() {
     this.application.views.register(this.propertiesView);
     this.application.fields.register(this.defaultFieldsDescriptor);
+    this.application.completions.register(this.basicCompletions);
 
     await this.application.commands.editor.showSecondarySideBarByKey('properties-side-bar');
   }
@@ -333,5 +412,6 @@ new class Extension extends ExtensionBase {
   async deactivate() {
     this.application.views.unregister(this.propertiesView);
     this.application.fields.unregister(this.defaultFieldsDescriptor);
+    this.application.completions.unregister(this.basicCompletions);
   }
 };

@@ -6,7 +6,7 @@ import { name } from './package.json';
 export default defineConfig({
   root: './',
   build: {
-    sourcemap: false,
+    sourcemap: true,
     emptyOutDir: true,
     lib: {
       name,
