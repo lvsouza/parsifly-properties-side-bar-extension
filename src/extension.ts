@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldDescriptor, IDoc, IStructureAttribute, CompletionsDescriptor, CompletionViewItem, IStructure } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldViewItem, IDoc, IStructureAttribute, CompletionsDescriptor, CompletionViewItem, IStructure } from 'parsifly-extension-base';
 import { getStructureAttributeProperties } from './mapping/structures';
 
 
@@ -42,7 +42,7 @@ new class Extension extends ExtensionBase {
 
       switch (item?.type) {
         case 'application': return [
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               name: 'name',
@@ -60,7 +60,7 @@ new class Extension extends ExtensionBase {
               },
             },
           }),
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               type: 'textarea',
@@ -78,7 +78,7 @@ new class Extension extends ExtensionBase {
               },
             }
           }),
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               type: 'text',
@@ -96,7 +96,7 @@ new class Extension extends ExtensionBase {
               },
             }
           }),
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               name: 'public',
@@ -116,7 +116,7 @@ new class Extension extends ExtensionBase {
           }),
         ];
         case 'page': return [
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Name',
@@ -135,7 +135,7 @@ new class Extension extends ExtensionBase {
               },
             }
           }),
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Description',
@@ -156,7 +156,7 @@ new class Extension extends ExtensionBase {
           }),
         ];
         case 'component': return [
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Name',
@@ -175,7 +175,7 @@ new class Extension extends ExtensionBase {
               },
             }
           }),
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Description',
@@ -196,7 +196,7 @@ new class Extension extends ExtensionBase {
           }),
         ];
         case 'action': return [
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Name',
@@ -215,7 +215,7 @@ new class Extension extends ExtensionBase {
               },
             }
           }),
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Description',
@@ -236,7 +236,7 @@ new class Extension extends ExtensionBase {
           }),
         ];
         case 'folder': return [
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Name',
@@ -255,7 +255,7 @@ new class Extension extends ExtensionBase {
               },
             }
           }),
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Description',
@@ -276,7 +276,7 @@ new class Extension extends ExtensionBase {
           }),
         ];
         case 'structure': return [
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Name',
@@ -295,7 +295,7 @@ new class Extension extends ExtensionBase {
               },
             }
           }),
-          new FieldDescriptor({
+          new FieldViewItem({
             key: crypto.randomUUID(),
             initialValue: {
               label: 'Description',

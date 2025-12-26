@@ -1,10 +1,10 @@
-import { CompletionViewItem, FieldDescriptor, IDoc, IStructureAttribute, TApplication, TDataType, TFieldDescriptorType } from 'parsifly-extension-base';
+import { CompletionViewItem, FieldViewItem, IDoc, IStructureAttribute, TApplication, TDataType, TFieldViewItemType } from 'parsifly-extension-base';
 
 
 export const getStructureAttributeProperties = (application: TApplication, item: IStructureAttribute, path: IDoc<IStructureAttribute>) => {
 
   return [
-    new FieldDescriptor({
+    new FieldViewItem({
       key: crypto.randomUUID(),
       initialValue: {
         label: 'Name',
@@ -23,7 +23,7 @@ export const getStructureAttributeProperties = (application: TApplication, item:
         },
       }
     }),
-    new FieldDescriptor({
+    new FieldViewItem({
       key: crypto.randomUUID(),
       initialValue: {
         type: 'textarea',
@@ -42,7 +42,7 @@ export const getStructureAttributeProperties = (application: TApplication, item:
         },
       }
     }),
-    new FieldDescriptor({
+    new FieldViewItem({
       key: crypto.randomUUID(),
       initialValue: {
         label: 'Required',
@@ -61,7 +61,7 @@ export const getStructureAttributeProperties = (application: TApplication, item:
         },
       }
     }),
-    new FieldDescriptor({
+    new FieldViewItem({
       key: crypto.randomUUID(),
       initialValue: {
         label: 'Data type',
@@ -95,6 +95,11 @@ export const getStructureAttributeProperties = (application: TApplication, item:
                 },
               }).serialize();
             }
+            case 'structure': {
+              const referenceId = await path.field('referenceId').value();
+              const completion = completions.find((completion: any) => typeof completion.value === 'object' && 'type' in completion.value && completion.value.type === 'structure' && completion.value.referenceId === referenceId);
+              return completion || null;
+            }
             case 'array_object': {
               const attributes = await path.collection('attributes').value();
               return new CompletionViewItem({
@@ -106,21 +111,43 @@ export const getStructureAttributeProperties = (application: TApplication, item:
                 },
               }).serialize();
             }
-            case 'structure': {
-              const completion = completions.find(completion => completion.value === dataTypeValue);
-              return completion || null;
-            }
             case 'array_structure': {
-              const completion = completions.find(completion => completion.value === dataTypeValue);
-              return completion || null;
+              const referenceId = await path.field('referenceId').value();
+              const completion = completions.find((completion: any) => typeof completion.value === 'object' && 'type' in completion.value && completion.value.type === 'structure' && completion.value.referenceId === referenceId);
+              if (!completion) return null;
+
+              return new CompletionViewItem({
+                key: 'array_structure',
+                initialValue: {
+                  icon: completion.icon,
+                  label: `Array of<${completion.label}>`,
+                  value: { type: 'array_structure', referenceId },
+                },
+              }).serialize();
             }
 
             default: return dataTypeValue;
           }
         },
         onDidChange: async (value, context) => {
-          console.log(value)
-          await path.field('dataType').set(value);
+          console.log('did value changed', value);
+
+          if (value && typeof value === 'object' && 'type' in value && value.type === 'structure') {
+            await path.field('referenceId').set(value.referenceId);
+            await path.field('dataType').set(value.type);
+            await path.collection('attributes').set([]);
+            await path.field('defaultValue').set(null);
+          } else if (value === 'object') {
+            const previousValue = await path.value();
+
+            await path.collection<IStructureAttribute>('attributes').set([{ ...previousValue, id: crypto.randomUUID() }]);
+            await path.field('defaultValue').set(null);
+            await path.field('referenceId').set(null);
+            await path.field('dataType').set(value);
+          } else {
+            await path.field('dataType').set(value);
+          }
+
           await context.reloadValue();
         },
         getCompletions: async (query, context) => {
@@ -137,7 +164,7 @@ export const getStructureAttributeProperties = (application: TApplication, item:
         },
       },
     }),
-    new FieldDescriptor({
+    new FieldViewItem({
       key: crypto.randomUUID(),
       initialValue: {
         label: 'Default value',
@@ -145,8 +172,8 @@ export const getStructureAttributeProperties = (application: TApplication, item:
         type: 'boolean',
         description: 'Change attribute is defaultValue',
         getValue: async () => {
-          if (path) return await path.field('defaultValue').value() ?? true;
-          return item.defaultValue ?? true;
+          if (path) return await path.field('defaultValue').value() ?? null;
+          return item.defaultValue ?? null;
         },
         onDidChange: async (value) => {
           if (typeof value === 'string' && path) {
@@ -186,7 +213,7 @@ export const getStructureAttributeProperties = (application: TApplication, item:
   ];
 }
 
-const getFieldTypeByDataType = (dataType: TDataType): TFieldDescriptorType | null => {
+const getFieldTypeByDataType = (dataType: TDataType): TFieldViewItemType | null => {
   switch (dataType) {
     case 'string': return 'text'
     case 'number': return 'number'
