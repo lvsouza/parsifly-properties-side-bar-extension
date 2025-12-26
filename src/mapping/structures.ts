@@ -1,4 +1,4 @@
-import { CompletionViewItem, FieldViewItem, IDoc, IStructureAttribute, TApplication, TDataType, TFieldViewItemType } from 'parsifly-extension-base';
+import { CompletionViewItem, FieldViewItem, IDoc, IStructureAttribute, TApplication, TDataType, TFieldViewItemType, TFieldViewItemValue } from 'parsifly-extension-base';
 
 
 export const getStructureAttributeProperties = (application: TApplication, item: IStructureAttribute, path: IDoc<IStructureAttribute>) => {
@@ -91,7 +91,7 @@ export const getStructureAttributeProperties = (application: TApplication, item:
                 initialValue: {
                   value: 'object',
                   icon: { type: 'object' },
-                  label: `Object of<${attributes.map(attribute => attribute.dataType).join(',')}>`,
+                  label: `Object of ${attributes.map(attribute => attribute.dataType).join(',')}`,
                 },
               }).serialize();
             }
@@ -107,7 +107,7 @@ export const getStructureAttributeProperties = (application: TApplication, item:
                 initialValue: {
                   value: 'array_object',
                   icon: { type: 'array' },
-                  label: `Array of<${attributes.map(attribute => attribute.dataType).join(',')}>`,
+                  label: `Array of ${attributes.map(attribute => attribute.dataType.replace('array_', '')).join(',')}`,
                 },
               }).serialize();
             }
@@ -119,40 +119,87 @@ export const getStructureAttributeProperties = (application: TApplication, item:
               return new CompletionViewItem({
                 key: 'array_structure',
                 initialValue: {
-                  icon: completion.icon,
-                  label: `Array of<${completion.label}>`,
+                  icon: { type: 'array' },
+                  label: `Array of ${completion.label}`,
                   value: { type: 'array_structure', referenceId },
                 },
               }).serialize();
             }
 
-            default: return dataTypeValue;
+            default: {
+              return new CompletionViewItem({
+                key: dataTypeValue,
+                initialValue: {
+                  value: dataTypeValue,
+                  icon: { type: 'array' },
+                  label: `Array of ${dataTypeValue.replace('array_', '')}`,
+                },
+              }).serialize();
+            }
           }
         },
         onDidChange: async (value, context) => {
-          console.log('did value changed', value);
-
           if (value && typeof value === 'object' && 'type' in value && value.type === 'structure') {
             await path.field('referenceId').set(value.referenceId);
             await path.field('dataType').set(value.type);
             await path.collection('attributes').set([]);
             await path.field('defaultValue').set(null);
           } else if (value === 'object') {
-            const previousValue = await path.value();
+            const previousAttributeData = await path.value();
 
-            await path.collection<IStructureAttribute>('attributes').set([{ ...previousValue, id: crypto.randomUUID() }]);
+            await path.collection<IStructureAttribute>('attributes').set([{ ...previousAttributeData, id: crypto.randomUUID() }]);
             await path.field('defaultValue').set(null);
             await path.field('referenceId').set(null);
             await path.field('dataType').set(value);
+          } else if (value === 'array') {
+            const arrayTypesCompletions = await application.completions.get({
+              kind: 'type_of_array',
+              visibility: {
+                type: 'structure_attribute',
+              },
+            })
+
+            const arrayType = await application.quickPick.show<TFieldViewItemValue>({
+              modal: true,
+              selectOnly: true,
+              title: 'Select the array type',
+              options: arrayTypesCompletions,
+              helpText: 'Select one of this options',
+            });
+            if (!arrayType) return;
+
+            if (arrayType && typeof arrayType === 'object' && 'type' in arrayType && arrayType.type === 'structure') {
+              await path.field('referenceId').set(arrayType.referenceId);
+              await path.field('dataType').set(`array_structure`);
+              await path.collection('attributes').set([]);
+            } else if (arrayType === 'object') {
+              const previousAttributeData = await path.value();
+
+              await path.collection<IStructureAttribute>('attributes').set([{ ...previousAttributeData, id: crypto.randomUUID() }]);
+              await path.field('dataType').set(`array_object`);
+              await path.field('defaultValue').set(null);
+              await path.field('referenceId').set(null);
+            } else {
+              await path.field('dataType').set(`array_${arrayType}`);
+              await path.collection('attributes').set([]);
+              await path.field('referenceId').set(null);
+            }
+
+            await path.field('defaultValue').set(null);
           } else {
+            await path.collection('attributes').set([]);
+            await path.field('referenceId').set(null);
             await path.field('dataType').set(value);
+
+            const defaultValue = await path.field('defaultValue').value();
+            if (typeof defaultValue !== value) {
+              await path.field('defaultValue').set(null);
+            }
           }
 
           await context.reloadValue();
         },
-        getCompletions: async (query, context) => {
-          console.log('getCompletions', query, context);
-
+        getCompletions: async () => {
           const result = await application.completions.get({
             kind: 'type',
             visibility: {

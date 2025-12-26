@@ -1,4 +1,4 @@
-import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldViewItem, IDoc, IStructureAttribute, CompletionsDescriptor, CompletionViewItem, IStructure } from 'parsifly-extension-base';
+import { ExtensionBase, View, FormProvider, FieldsDescriptor, FieldViewItem, IDoc, IStructureAttribute, CompletionsDescriptor, CompletionViewItem, IStructure, IFolder } from 'parsifly-extension-base';
 import { getStructureAttributeProperties } from './mapping/structures';
 
 
@@ -322,69 +322,78 @@ new class Extension extends ExtensionBase {
     }
   })
 
+  primitiveTypes = [
+    new CompletionViewItem({
+      key: 'string',
+      initialValue: {
+        label: 'String',
+        value: 'string',
+        icon: { type: 'string' },
+        description: 'Base type for strings',
+      },
+    }),
+    new CompletionViewItem({
+      key: 'number',
+      initialValue: {
+        label: 'Number',
+        value: 'number',
+        icon: { type: 'number' },
+        description: 'Base type for numbers',
+      },
+    }),
+    new CompletionViewItem({
+      key: 'boolean',
+      initialValue: {
+        label: 'Boolean',
+        value: 'boolean',
+        icon: { type: 'boolean' },
+        description: 'Base type for booleans',
+      },
+    }),
+    new CompletionViewItem({
+      key: 'binary',
+      initialValue: {
+        label: 'Binary',
+        value: 'binary',
+        icon: { type: 'binary' },
+        description: 'Base type for binary',
+      },
+    }),
+  ];
+  primitiveComposableTypes = [
+    new CompletionViewItem({
+      key: 'object',
+      initialValue: {
+        label: 'Object',
+        value: 'object',
+        icon: { type: 'object' },
+        description: 'Allow to add more attributes',
+      },
+    }),
+    new CompletionViewItem({
+      key: 'array',
+      initialValue: {
+        label: 'Array',
+        value: 'array',
+        icon: { type: 'array' },
+        description: 'List of some primitive or composed type',
+      },
+    }),
+  ];
+  flatFolders(structures: (IStructure | IFolder<IStructure>)[]): IStructure[] {
+    return structures.flatMap(structure => structure.type === 'structure' ? [structure] : this.flatFolders(structure.content))
+  }
   basicCompletions = new CompletionsDescriptor({
     key: 'basic',
     onGetCompletions: async (intent) => {
       console.log('intent', intent)
 
-      const structures = await this.application.dataProviders.project().collection<IStructure>('structures').value()
+      const structuresAndFolders = await this.application.dataProviders.project().collection<IStructure | IFolder<IStructure>>('structures').value()
+      const structures = this.flatFolders(structuresAndFolders);
 
-      return [
-        new CompletionViewItem({
-          key: 'string',
-          initialValue: {
-            label: 'String',
-            value: 'string',
-            icon: { type: 'string' },
-            description: 'Base type for strings',
-          },
-        }),
-        new CompletionViewItem({
-          key: 'number',
-          initialValue: {
-            label: 'Number',
-            value: 'number',
-            icon: { type: 'number' },
-            description: 'Base type for numbers',
-          },
-        }),
-        new CompletionViewItem({
-          key: 'boolean',
-          initialValue: {
-            label: 'Boolean',
-            value: 'boolean',
-            icon: { type: 'boolean' },
-            description: 'Base type for booleans',
-          },
-        }),
-        new CompletionViewItem({
-          key: 'binary',
-          initialValue: {
-            label: 'Binary',
-            value: 'binary',
-            icon: { type: 'binary' },
-            description: 'Base type for binary',
-          },
-        }),
-        new CompletionViewItem({
-          key: 'object',
-          initialValue: {
-            label: 'Object',
-            value: 'object',
-            icon: { type: 'object' },
-            description: 'Allow to add more attributes',
-          },
-        }),
-        new CompletionViewItem({
-          key: 'array',
-          initialValue: {
-            label: 'Array',
-            value: 'array',
-            icon: { type: 'array' },
-            description: 'List of some primitive or composed type',
-          },
-        }),
-
+      if (intent.kind === 'type') return [
+        ...this.primitiveTypes,
+        ...this.primitiveComposableTypes,
         ...structures.map(structure => (
           new CompletionViewItem({
             key: structure.id,
@@ -397,6 +406,32 @@ new class Extension extends ExtensionBase {
           })
         )),
       ];
+
+      if (intent.kind === 'type_of_array') return [
+        ...this.primitiveTypes,
+        new CompletionViewItem({
+          key: 'object',
+          initialValue: {
+            label: 'Object',
+            value: 'object',
+            icon: { type: 'object' },
+            description: 'Allow to add more attributes',
+          },
+        }),
+        ...structures.map(structure => (
+          new CompletionViewItem({
+            key: structure.id,
+            initialValue: {
+              label: structure.name,
+              icon: { type: 'structure' },
+              description: structure.description || '',
+              value: { type: 'structure', referenceId: structure.id },
+            },
+          })
+        )),
+      ];
+
+      return [];
     }
   })
 
