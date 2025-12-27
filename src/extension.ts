@@ -441,7 +441,7 @@ new class Extension extends ExtensionBase {
     this.application.fields.register(this.defaultFieldsDescriptor);
     this.application.completions.register(this.basicCompletions);
 
-    await this.application.commands.editor.showSecondarySideBarByKey('properties-side-bar');
+    await this.application.views.showSecondarySideBarByKey('properties-side-bar');
   }
 
   async deactivate() {
